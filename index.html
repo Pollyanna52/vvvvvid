@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#ffffff">
+<title>Transcript</title>
+<style>
+  :root { color-scheme: light; --text:#171717; --muted:#858585; --line:#e8e8e8; --active:#111; }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:auto; }
+  body { margin:0; background:#fff; color:var(--text); font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif; }
+  button,input { font:inherit; }
+  button { cursor:pointer; }
+  a { color:inherit; }
+  .page { width:min(790px,calc(100% - 36px)); margin:0 auto; overflow-anchor:none; }
+  .home-import-spot { position:fixed; z-index:100; top:14px; left:14px; }
+  .import-bar { position:relative; z-index:auto; font-size:11px; color:#777; }
+  .home-import-trigger, .settings-trigger { border:1px solid #171717; border-radius:0; background:#fff; color:#111; padding:7px 10px; font-size:12px; line-height:1.2; white-space:nowrap; }
+  .home-import-trigger:hover, .settings-trigger:hover, .settings-trigger[aria-expanded="true"] { background:#111; color:#fff; }
+  .text-link { border:0; padding:0; background:none; color:inherit; text-decoration:underline; text-decoration-color:#c8c8c8; text-underline-offset:3px; }
+  .text-link:hover { color:#111; text-decoration-color:#111; }
+  .dock-panel { display:none; position:absolute; top:calc(100% + 8px); left:0; right:auto; bottom:auto; width:min(540px,calc(100vw - 24px)); max-height:min(70vh,620px); overflow:auto; padding:13px 14px 12px; background:#fff; border:1px solid #e7e7e7; box-shadow:0 8px 26px rgba(0,0,0,.12); font-size:12px; color:#555; line-height:1.8; text-align:left; }
+  .dock-panel.open { display:block; }
+  .caption-settings-panel { width:auto; }
+  .caption-setting-row { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:5px 0; color:#333; }
+  .caption-setting-row input[type="range"] { width:130px; accent-color:#111; }
+  .caption-setting-row input[type="checkbox"] { accent-color:#111; }
+  .caption-size-value { min-width:34px; text-align:right; color:#555; font-variant-numeric:tabular-nums; }
+  .import-row { display:flex; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:8px; }
+  .file-picker { display:inline-block; cursor:pointer; text-decoration:underline; text-underline-offset:3px; color:#222; }
+  .file-picker:hover { color:#777; }
+  .hint { color:#999; }
+  .asset-list { color:#888; overflow-wrap:anywhere; }
+  .url-row { display:flex; align-items:center; gap:8px; margin:9px 0 3px; max-width:440px; }
+  .url-row input { flex:1; min-width:0; border:0; border-bottom:1px solid #ddd; padding:5px 0; outline:none; border-radius:0; font-size:12px; background:transparent; }
+  .url-row input:focus { border-color:#111; }
+  .hidden-input { display:none; }
+  .player-window { position:fixed; z-index:20; top:52px; left:calc(50% - 260px); width:min(520px,calc(100vw - 24px)); height:310px; min-width:240px; min-height:170px; max-width:calc(100vw - 12px); max-height:calc(100vh - 12px); background:#000; overflow:hidden; display:none; box-shadow:0 2px 18px rgba(0,0,0,.10); }
+  .player-window.visible { display:flex; flex-direction:column; }
+  .player-stage { min-height:0; flex:1; position:relative; background:#000; }
+  .playback-toolbar { flex:0 0 auto; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:5px; padding:6px 7px; background:#fff; color:#111; }
+  .playback-toolbar button { border:1px solid #171717; border-radius:0; background:#fff; color:#111; padding:4px 7px; min-height:25px; font-size:11px; line-height:1.2; white-space:nowrap; }
+  .playback-toolbar button:hover { background:#111; color:#fff; }
+  video { display:block; width:100%; height:100%; background:#000; object-fit:contain; }
+  .video-caption { position:absolute; left:50%; bottom:13%; transform:translateX(-50%); max-width:92%; width:max-content; padding:4px 8px; color:white; background:rgba(0,0,0,.68); font-size:var(--caption-size,21px); line-height:1.5; text-align:center; white-space:pre-wrap; overflow-wrap:anywhere; text-shadow:0 1px 2px #000; pointer-events:none; border-radius:2px; }
+  .video-caption:empty { display:none; }
+  .player-window video::cue { color:white; background:rgba(0,0,0,.7); }
+  .transcript-wrap { padding:0 0 100px; min-width:0; }
+  .sync-label { display:inline-flex; align-items:center; gap:6px; cursor:pointer; white-space:nowrap; color:#222; font-size:11px; }
+  .sync-label input { width:12px; height:12px; margin:0; accent-color:#111; }
+  .export-links { display:flex; align-items:center; gap:12px; }
+  .export-links button { border:0; padding:0; color:#777; background:none; text-decoration:underline; text-decoration-color:#ddd; text-underline-offset:3px; font-size:11px; }
+  .export-links button:not(:disabled):hover { color:#111; text-decoration-color:#111; }
+  .export-links button:disabled { opacity:.25; cursor:default; text-decoration:none; }
+  .control-dock { position:fixed; z-index:105; right:12px; bottom:12px; display:block; max-width:calc(100vw - 24px); color:#111; }
+  .settings-menu-anchor { position:relative; display:inline-block; }
+  .settings-menu { display:none; position:absolute; right:0; bottom:calc(100% + 8px); width:min(330px,calc(100vw - 24px)); max-height:min(76vh,720px); overflow:auto; flex-direction:column; align-items:stretch; gap:11px; padding:13px; border:1px solid #171717; background:#fff; color:#111; box-shadow:0 5px 20px rgba(0,0,0,.12); font-size:12px; text-align:left; }
+  .settings-menu-anchor:hover .settings-menu, .settings-menu-anchor:focus-within .settings-menu, .settings-menu.open { display:flex; }
+  .settings-menu .sync-label { padding-bottom:10px; border-bottom:1px solid #eee; }
+  .settings-menu .export-links { gap:14px; padding-bottom:10px; border-bottom:1px solid #eee; }
+  .settings-menu .import-bar { display:block; padding-bottom:10px; border-bottom:1px solid #eee; }
+  .settings-menu .import-bar > .dock-trigger { font-size:12px; }
+  .settings-menu .dock-panel { position:static; width:auto; max-width:none; max-height:min(38vh,380px); overflow:auto; padding:10px 0 0; margin-top:8px; border:0; border-top:1px solid #eee; box-shadow:none; background:#fff; }
+  .settings-menu .caption-settings-panel { width:auto; }
+  .settings-menu .settings-group { padding-bottom:10px; border-bottom:1px solid #eee; }
+  .dock-trigger { border:0; padding:0; background:none; color:#555; font-size:12px; text-decoration:underline; text-decoration-color:#d2d2d2; text-underline-offset:3px; white-space:nowrap; }
+  .dock-trigger:hover, .dock-trigger[aria-expanded="true"] { color:#111; text-decoration-color:#111; }
+  .control-mode { align-self:flex-start; border:1px solid #171717; border-radius:0; background:#fff; color:#111; padding:6px 9px; font-size:12px; white-space:nowrap; }
+  .control-mode:hover, .control-mode[aria-pressed="true"] { background:#111; color:#fff; }
+  .dual-workspace { display:none; }
+  .dual-workspace.open { position:fixed; z-index:10; inset:0 0 66px; display:grid; padding:8px 12px; background:#fff; }
+  .dual-workspace.single-mode { grid-template-columns:minmax(0,1fr); grid-template-rows:minmax(160px,var(--stack-video-fraction, 42%)) 9px minmax(0,1fr); }
+  .dual-workspace.dual-mode { grid-template-columns:minmax(0,var(--video-fraction, 50%)) 9px minmax(0,1fr); grid-template-rows:minmax(0,1fr); }
+  .dual-video-pane, .dual-transcript-pane { min-width:0; min-height:0; overflow:hidden; }
+  .dual-video-pane { position:relative; display:flex; align-items:center; justify-content:center; background:#fff; }
+  .dual-transcript-pane { overflow:auto; padding:18px 14px 90px; overscroll-behavior:contain; overflow-anchor:none; }
+  .single-mode .dual-video-pane { grid-column:1; grid-row:1; }
+  .single-mode .dual-transcript-pane { grid-column:1; grid-row:3; padding:16px max(14px, calc((100% - 790px) / 2)) 90px; }
+  .dual-mode .dual-video-pane { grid-column:1; grid-row:1; background:#000; }
+  .dual-mode .dual-transcript-pane { grid-column:3; grid-row:1; padding:18px 14px 90px; }
+  .dual-transcript-pane .transcript-wrap { width:100%; padding:0 0 30px; }
+  .splitter { position:relative; touch-action:none; user-select:none; background:#fff; outline:none; }
+  .single-mode .splitter { grid-column:1; grid-row:2; cursor:row-resize; }
+  .single-mode .splitter::after { content:""; position:absolute; left:0; right:0; top:4px; height:1px; background:#d7d7d7; }
+  .single-mode .splitter:hover::after, .single-mode .splitter:focus-visible::after { top:3px; height:3px; background:#111; }
+  .dual-mode .splitter { grid-column:2; grid-row:1; cursor:col-resize; }
+  .dual-mode .splitter::after { content:""; position:absolute; top:0; bottom:0; left:4px; width:1px; background:#d7d7d7; }
+  .dual-mode .splitter:hover::after, .dual-mode .splitter:focus-visible::after { left:3px; width:3px; background:#111; }
+  .player-window.workspace-player { position:relative !important; inset:auto !important; left:auto !important; top:auto !important; width:100% !important; height:100% !important; min-width:0 !important; min-height:0 !important; max-width:none !important; max-height:none !important; resize:none !important; box-shadow:none !important; }
+  .single-mode .player-window.workspace-player { width:min(100%, 1100px) !important; }
+  .player-window.workspace-player .video-caption { bottom:13%; }
+  .workspace-mode .page { display:none; }
+  .dual-mode .player-window { overflow:hidden; }
+  .transcript-list { font-size:16px; line-height:1.95; letter-spacing:.002em; overflow-wrap:anywhere; overflow-anchor:none; }
+  .sentence { display:block; width:100%; min-height:1em; margin:0 0 13px; padding:0; color:#333; border:0; border-radius:0; outline:none; background:transparent; white-space:pre-wrap; overflow-wrap:anywhere; cursor:text; }
+  .sentence:hover { color:#111; }
+  .sentence.active { color:#111; font-weight:400; -webkit-text-stroke:.35px currentColor; text-shadow:.18px 0 currentColor,-.18px 0 currentColor; }
+  .sentence.editing { outline:1px solid #ddd; outline-offset:4px; background:#fff; }
+  .empty-note { margin:0; padding:0 0 60px; color:#b0b0b0; font-size:13px; line-height:1.8; }
+  .toast { position:fixed; z-index:80; left:50%; bottom:24px; transform:translate(-50%,12px); opacity:0; pointer-events:none; padding:9px 12px; background:#222; color:#fff; font-size:12px; border-radius:3px; max-width:calc(100vw - 28px); transition:opacity .16s,transform .16s; }
+  .toast.show { opacity:1; transform:translate(-50%,0); }
+  .toast.error { background:#7a2525; }
+  @media(max-width:600px) {
+    .page { width:calc(100% - 28px); }
+    .transcript-list { font-size:15px; line-height:1.9; }
+    .control-dock { right:8px; bottom:8px; }
+    .home-import-spot { top:8px; left:8px; }
+    .settings-menu { width:min(310px,calc(100vw - 16px)); max-height:78vh; padding:11px; }
+    .dual-workspace.open { inset:0 0 76px; padding:6px; }
+    .dual-workspace.single-mode { grid-template-rows:minmax(145px,var(--stack-video-fraction, 42%)) 9px minmax(0,1fr); }
+    .dual-workspace.dual-mode { grid-template-columns:minmax(0,var(--video-fraction, 50%)) 9px minmax(0,1fr); }
+    .dual-transcript-pane { padding:13px 8px 90px; }
+    .single-mode .dual-transcript-pane { padding:12px 14px 90px; }
+    .dual-transcript-pane .transcript-list { font-size:13px; line-height:1.8; }
+    .playback-toolbar { gap:3px; padding:5px 4px; }
+    .playback-toolbar button { padding:4px 5px; font-size:10px; }
+  }
+</style>
+</head>
+<body>
+<div class="page" id="page">
+  <section class="transcript-wrap" id="transcriptWrap">
+    <div id="transcriptList" class="transcript-list"></div>
+    <p id="emptyNote" class="empty-note">导入字幕后，文字会显示在这里。</p>
+  </section>
+</div>
+<div id="dualWorkspace" class="dual-workspace" aria-label="视频与文字工作区">
+  <div id="dualVideoPane" class="dual-video-pane"></div>
+  <div id="splitter" class="splitter" role="separator" aria-orientation="horizontal" aria-label="拖动调整视频与文字区域高度" tabindex="0"></div>
+  <div id="dualTranscriptPane" class="dual-transcript-pane"></div>
+</div>
+<div id="homeImportSpot" class="home-import-spot">
+  <div class="import-bar" id="importBar">
+    <button id="toggleImport" class="home-import-trigger" type="button" aria-expanded="false">导入文件</button>
+    <div id="importPanel" class="dock-panel import-panel">
+      <div class="import-row">
+        <label class="file-picker" for="sourceInput">选择视频、SRT、JSON3（可多选）</label>
+        <input id="sourceInput" class="hidden-input" type="file" multiple accept="video/*,.mp4,.webm,.mov,.mkv,.avi,.m4v,.ts,.mts,.flv,.ogv,.mpeg,.mpg,.srt,.json3,.json,.txt">
+      </div>
+      <div class="hint">同时选择即可一次导入。之后也可以只选一种补充；选中的文件类型会被替换，其他类型保留。SRT 优先作为文字稿，JSON3 用于单词定位。</div>
+      <div id="assetList" class="asset-list"></div>
+      <div class="url-row"><input id="videoUrlInput" type="url" placeholder="或粘贴视频直链" aria-label="视频直链"><button id="loadUrlBtn" class="text-link" type="button">加载</button></div>
+      <button id="clearBtn" class="text-link" type="button" style="margin-top:6px">清空全部</button>
+    </div>
+  </div>
+</div>
+<div id="controlDock" class="control-dock">
+  <div id="settingsMenuAnchor" class="settings-menu-anchor">
+    <button id="settingsMenuToggle" class="settings-trigger" type="button" aria-expanded="false">设置</button>
+    <div id="settingsMenu" class="settings-menu">
+      <label class="sync-label"><input id="syncToggle" type="checkbox" checked><span>跟随播放（加粗并滚动）</span></label>
+      <div class="export-links"><button id="exportTxtBtn" type="button" disabled>TXT</button><button id="exportSrtBtn" type="button" disabled>SRT</button></div>
+      <div id="importMenuSlot"></div>
+      <div class="settings-group" id="captionSettingsAnchor">
+        <button id="captionSettingsToggle" class="dock-trigger" type="button" aria-expanded="false">字幕设置</button>
+        <div id="captionSettingsPanel" class="dock-panel caption-settings-panel">
+          <label class="caption-setting-row"><span>显示字幕</span><input id="captionVisibleToggle" type="checkbox" checked></label>
+          <label class="caption-setting-row"><span>字幕大小</span><span style="display:flex;align-items:center;gap:8px"><input id="captionSizeRange" type="range" min="12" max="36" step="1" value="21"><span id="captionSizeValue" class="caption-size-value">21px</span></span></label>
+        </div>
+      </div>
+      <button id="dualToggle" class="control-mode" type="button" aria-pressed="false">双栏</button>
+    </div>
+  </div>
+</div>
+<div id="playerWindow" class="player-window" aria-label="固定在顶部的视频播放器">
+  <div class="player-stage"><video id="video" controls playsinline preload="metadata"></video><div id="videoCaption" class="video-caption" aria-live="off"></div></div>
+  <div class="playback-toolbar" aria-label="视频播放快捷控制">
+    <button id="prevSentenceBtn" type="button" title="跳到上一句">上一句</button>
+    <button id="nextSentenceBtn" type="button" title="跳到下一句">下一句</button>
+    <button id="slowerBtn" type="button" title="播放速度减慢 0.1 倍">慢速 −0.1×</button>
+    <button id="fasterBtn" type="button" title="播放速度加快 0.1 倍">快速 +0.1×</button>
+    <button id="normalSpeedBtn" type="button" title="恢复 1 倍速">恢复原速</button><span id="speedReadout" class="speed-readout" aria-label="播放速度">1x</span>
+  </div>
+</div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const video = $('video'), playerWindow = $('playerWindow');
+  const transcriptWrap = $('transcriptWrap'), dualWorkspace = $('dualWorkspace'), dualVideoPane = $('dualVideoPane'), dualTranscriptPane = $('dualTranscriptPane');
+  const originalTranscriptParent = transcriptWrap.parentNode, originalTranscriptNext = transcriptWrap.nextSibling;
+  const originalPlayerParent = playerWindow.parentNode, originalPlayerNext = playerWindow.nextSibling;
+  let dualMode = false, splitDrag = null;
+  let currentObjectUrl = null, videoLabel = '', srtFileName = '', jsonFileName = '';
+  let srtCues = [], jsonData = { cues:[], timedWords:[] }, jsonWords = [], sentences = [];
+  let editingIndex = null, editBackup = '', toastTimer = null, activeIndex = -1;
+  const wordRegex = /[\p{L}\p{N}\p{M}]+(?:[’'][\p{L}\p{N}\p{M}]+)*/gu;
+  const sentenceStops = new Set(['.', '!', '?', '。', '！', '？']);
+  const closers = new Set(['"', "'", '”', '’', '」', '』', '】', '》', '〉', ')', ']', '}', '）']);
+  function showToast(message, error=false) {
+    const el=$('toast'); el.textContent=message; el.classList.toggle('error',error); el.classList.add('show');
+    clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),2500);
+  }
+  function safeName(name) { return String(name||'video').replace(/[\\/:*?"<>|\u0000-\u001f]/g,'_').trim()||'video'; }
+  function basenameFromUrl(value) {
+    try { const u=new URL(value); return decodeURIComponent(u.pathname.split('/').filter(Boolean).pop()||'video').split('?')[0]||'video'; }
+    catch { return 'video'; }
+  }
+  function updateUrlName(name, sourceUrl='') {
+    try { const url=new URL(location.href); url.searchParams.set('video',safeName(name)); if(sourceUrl) url.searchParams.set('src',sourceUrl); else url.searchParams.delete('src'); history.replaceState({},'',url.pathname+url.search+url.hash); } catch {}
+  }
+  function parseTimecode(s) {
+    const match = String(s).trim().match(/(?:(\d{1,2}):)?(\d{1,2}):(\d{2})[,.](\d{1,3})/);
+    if (!match) return null;
+    const h = Number(match[1] || 0), m = Number(match[2]), sec = Number(match[3]);
+    const ms = Number(String(match[4]).padEnd(3, '0').slice(0, 3));
+    return h * 3600 + m * 60 + sec + ms / 1000;
+  }
+  function decodeEntities(value) {
+    const ta = document.createElement('textarea'); ta.innerHTML = value; return ta.value;
+  }
+  function cleanCaptionText(value) {
+    return decodeEntities(String(value || '').replace(/<\/?(?:i|b|u|font|c|v|ruby|rt|lang)[^>]*>/gi, '').replace(/<[^>]+>/g, ' '))
+      .replace(/\u200b/g, '').replace(/\r/g, '').replace(/\n+/g, ' ').replace(/[ \t]+/g, ' ').trim();
+  }
+  function parseSrt(raw) {
+    const text = String(raw || '').replace(/^\uFEFF/, '').replace(/\r/g, '').trim();
+    if (!text) return [];
+    const blocks = text.split(/\n\s*\n+/); const cues = [];
+    for (const block of blocks) {
+      const lines = block.split('\n').map(s => s.trim()).filter(Boolean);
+      const timeIndex = lines.findIndex(line => /\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}\s*-->\s*\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}/.test(line));
+      if (timeIndex < 0) continue;
+      const times = lines[timeIndex].split('-->');
+      const start = parseTimecode(times[0]), end = parseTimecode(times[1] || '');
+      const caption = cleanCaptionText(lines.slice(timeIndex + 1).join(' '));
+      if (caption && start !== null) cues.push({ start, end: end !== null && end > start ? end : start + 1, text: caption });
+    }
+    return cues;
+  }
+  function normalizeWord(word) {
+    return String(word || '').toLocaleLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^\p{L}\p{N}]/gu, '');
+  }
+  function tokenList(text) {
+    const out = []; const re = new RegExp(wordRegex.source, 'gu'); let match;
+    while ((match = re.exec(text))) out.push({ text: match[0], start: match.index, end: match.index + match[0].length, normalized: normalizeWord(match[0]) });
+    return out;
+  }
+  function parseJson3(raw) {
+    let data;
+    try { data = typeof raw === 'string' ? JSON.parse(raw.replace(/^\uFEFF/, '')) : raw; }
+    catch { throw new Error('JSON3 文件无法解析，请确认它是有效的 JSON3 字幕。'); }
+    const events = Array.isArray(data?.events) ? data.events : (Array.isArray(data?.transcript?.events) ? data.transcript.events : null);
+    if (!events) throw new Error('没有找到 JSON3 的 events 数组。');
+    const cues = [], timedWords = [];
+    for (const event of events) {
+      if (!event || !Number.isFinite(Number(event.tStartMs))) continue;
+      const start = Number(event.tStartMs) / 1000;
+      const duration = Math.max(Number(event.dDurationMs || 0) / 1000, 0.08);
+      const eventEnd = start + duration;
+      const segs = Array.isArray(event.segs) ? event.segs : [];
+      const rawText = segs.length ? segs.map(s => s && typeof s.utf8 === 'string' ? s.utf8 : '').join('') : (typeof event.utf8 === 'string' ? event.utf8 : '');
+      const text = cleanCaptionText(rawText);
+      if (!text) continue;
+      cues.push({ start, end: eventEnd > start ? eventEnd : start + 0.8, text });
+      if (!segs.length) {
+        const tokens = tokenList(text);
+        const weights = tokens.map(t => Math.max(t.text.length, 1)); const total = weights.reduce((a,b)=>a+b,0) || 1;
+        let elapsed = 0;
+        tokens.forEach((t, i) => { const a = start + duration * elapsed / total; elapsed += weights[i]; const b = start + duration * elapsed / total; timedWords.push({ text:t.text, normalized:t.normalized, start:a, end:Math.max(a+0.025,b) }); });
+        continue;
+      }
+      const segRanges = getJsonSegmentRanges(segs, start, eventEnd);
+      segs.forEach((seg, i) => {
+        const segText = typeof seg?.utf8 === 'string' ? seg.utf8 : '';
+        const tokens = tokenList(segText);
+        if (!tokens.length) return;
+        const range = segRanges[i] || { start, end: eventEnd };
+        const weights = tokens.map(t => Math.max([...t.text].length, 1)); const total = weights.reduce((a,b)=>a+b,0) || 1;
+        let elapsed = 0;
+        tokens.forEach((t, j) => {
+          const a = range.start + Math.max(0, range.end-range.start) * elapsed / total;
+          elapsed += weights[j];
+          const b = range.start + Math.max(0, range.end-range.start) * elapsed / total;
+          timedWords.push({ text:t.text, normalized:t.normalized, start:a, end:Math.max(a + 0.025, b) });
+        });
+      });
+    }
+    timedWords.sort((a,b) => a.start-b.start || a.end-b.end);
+    return { cues, timedWords };
+  }
+  function getJsonSegmentRanges(segs, eventStart, eventEnd) {
+    const n = segs.length; const offsets = segs.map(s => s?.tOffsetMs !== undefined && s?.tOffsetMs !== null && s?.tOffsetMs !== '' && Number.isFinite(Number(s.tOffsetMs)) ? eventStart + Number(s.tOffsetMs)/1000 : null);
+    const hasOffsets = offsets.some(x => x !== null);
+    if (!hasOffsets) {
+      const weights = segs.map(s => Math.max(String(s?.utf8 || '').length, 1)); const total = weights.reduce((a,b)=>a+b,0) || n;
+      let elapsed = 0;
+      return weights.map(w => { const a = eventStart + (eventEnd-eventStart)*elapsed/total; elapsed += w; return { start:a, end:eventStart+(eventEnd-eventStart)*elapsed/total }; });
+    }
+    // Interpolate missing segment starts between known offsets, weighted by text length.
+    const starts = offsets.slice();
+    const anchors = [{ index: -1, time: eventStart }, ...starts.map((time,index)=>time === null ? null : ({index,time})).filter(Boolean), { index:n, time:eventEnd }];
+    for (let k=0; k<anchors.length-1; k++) {
+      const left = anchors[k], right = anchors[k+1];
+      const lo = left.index + 1, hi = right.index - 1;
+      if (hi < lo) continue;
+      const weights = [];
+      for (let i=lo;i<=hi;i++) weights.push(Math.max(String(segs[i]?.utf8 || '').length,1));
+      const total = weights.reduce((a,b)=>a+b,0) || 1; let elapsed=0;
+      for (let j=lo;j<=hi;j++) { starts[j] = left.time + (right.time-left.time)*elapsed/total; elapsed += weights[j-lo]; }
+    }
+    const ranges = [];
+    for (let i=0;i<n;i++) {
+      let a = starts[i] == null ? eventStart : starts[i];
+      let b = i+1<n ? starts[i+1] : eventEnd;
+      if (!(b > a + 0.01)) {
+        const weight = Math.max(String(segs[i]?.utf8 || '').length,1);
+        b = Math.min(eventEnd, a + Math.max(0.04, (eventEnd-eventStart)*weight/Math.max(segs.map(s=>String(s?.utf8||'').length).reduce((x,y)=>x+y,0),1)));
+      }
+      ranges.push({ start: Math.min(Math.max(a,eventStart),eventEnd), end: Math.min(Math.max(b,a+0.025),eventEnd) });
+    }
+    return ranges;
+  }
+  function makeSentenceRanges(text) {
+    const ranges = []; let start = 0; let i = 0;
+    while (i < text.length) {
+      const ch = text[i];
+      if (sentenceStops.has(ch)) {
+        if (ch === '.' && /\d/.test(text[i-1] || '') && /\d/.test(text[i+1] || '')) { i++; continue; }
+        let j = i + 1;
+        while (j < text.length && closers.has(text[j])) j++;
+        const piece = text.slice(start, j);
+        if (piece.trim()) ranges.push({ start, end:j });
+        start = j;
+        while (start < text.length && /\s/.test(text[start])) start++;
+        i = start; continue;
+      }
+      i++;
+    }
+    if (text.slice(start).trim()) ranges.push({ start, end:text.length });
+    return ranges.map(r => {
+      let a=r.start,b=r.end; while (a<b && /\s/.test(text[a])) a++; while (b>a && /\s/.test(text[b-1])) b--;
+      return { start:a, end:b, text:text.slice(a,b) };
+    }).filter(r => r.text);
+  }
+  function buildSentencesFromCues(cues) {
+    const valid = cues.filter(c => c.text && c.text.trim());
+    let combined = ''; const charCueMap = [];
+    valid.forEach((cue, ci) => {
+      if (combined.length) { combined += ' '; charCueMap.push(ci); }
+      const text = cleanCaptionText(cue.text);
+      combined += text;
+      for (let i=0;i<text.length;i++) charCueMap.push(ci);
+    });
+    if (!combined.trim()) return [];
+    const ranges = makeSentenceRanges(combined);
+    const result = ranges.map((r) => {
+      const cueIndexes = new Set();
+      for (let k=r.start;k<r.end;k++) if (charCueMap[k] !== undefined) cueIndexes.add(charCueMap[k]);
+      const relevant = [...cueIndexes].map(i=>valid[i]).filter(Boolean);
+      const sourceStart = relevant.length ? Math.min(...relevant.map(c=>c.start)) : 0;
+      const sourceEnd = relevant.length ? Math.max(...relevant.map(c=>c.end || c.start+1)) : sourceStart+1;
+      return { text:r.text, sourceStart, sourceEnd, start:sourceStart, end:Math.max(sourceStart+0.05,sourceEnd), words:[] };
+    });
+    // If one subtitle cue contains several sentences, divide its time range across them.
+    const groups = new Map();
+    result.forEach((s, i) => { const key = `${s.sourceStart.toFixed(3)}|${s.sourceEnd.toFixed(3)}`; if (!groups.has(key)) groups.set(key, []); groups.get(key).push(i); });
+    for (const idxs of groups.values()) {
+      if (idxs.length < 2) continue;
+      const first = result[idxs[0]], last = result[idxs[idxs.length-1]];
+      const totalDur = Math.max(0.15, first.sourceEnd-first.sourceStart);
+      const weights = idxs.map(i => Math.max(tokenList(result[i].text).length, 1)); const total = weights.reduce((a,b)=>a+b,0);
+      let elapsed=0;
+      idxs.forEach((index, j) => { const s=result[index]; s.start=first.sourceStart+totalDur*elapsed/total; elapsed+=weights[j]; s.end=first.sourceStart+totalDur*elapsed/total; if(s.end<=s.start) s.end=s.start+0.05; });
+    }
+    return result;
+  }
+  function alignSentenceWords(items, timed) {
+    let cursor = 0;
+    const flat = [];
+    items.forEach((sentence, sentenceIndex) => {
+      sentence.words = tokenList(sentence.text).map(w => ({ ...w, timing:null }));
+      sentence.words.forEach((word, wordIndex) => flat.push({ sentenceIndex, wordIndex, word }));
+    });
+    if (!timed.length || !flat.length) return items;
+    for (const entry of flat) {
+      const w=entry.word; if (!w.normalized) continue;
+      const stop = Math.min(timed.length, cursor + 35);
+      let found = -1;
+      for (let j=cursor;j<stop;j++) { if (timed[j].normalized === w.normalized) { found=j; break; } }
+      if (found < 0) {
+        // As a fallback, search farther ahead for subtitle/ASR alignment after a dropped phrase.
+        const farStop = Math.min(timed.length, cursor + 110);
+        for (let j=stop;j<farStop;j++) { if (timed[j].normalized === w.normalized) { found=j; break; } }
+      }
+      if (found >= 0) {
+        w.timing = timed[found]; cursor = found+1;
+      }
+    }
+    items.forEach(s => {
+      const matches = s.words.map(w=>w.timing).filter(Boolean);
+      if (matches.length) {
+        s.start = Math.max(0, matches[0].start);
+        s.end = Math.max(s.start+0.05, matches[matches.length-1].end);
+      } else { s.start = s.sourceStart; s.end = Math.max(s.sourceStart+0.05, s.sourceEnd); }
+    });
+    return items;
+  }
+
+  function buildCurrentSentences() {
+    const cues = srtCues.length ? srtCues : jsonData.cues;
+    sentences = alignSentenceWords(buildSentencesFromCues(cues), jsonWords);
+    renderTranscript(); updatePlaybackPosition(true); updateCaption();
+  }
+  function renderTranscript() {
+    const list=$('transcriptList'), empty=$('emptyNote'); list.replaceChildren();
+    $('exportTxtBtn').disabled=!sentences.length; $('exportSrtBtn').disabled=!sentences.length;
+    empty.hidden=sentences.length>0;
+    sentences.forEach((sentence,i)=>{
+      const el=document.createElement('div'); el.className='sentence'; el.dataset.index=String(i); el.textContent=sentence.text;
+      el.setAttribute('role','textbox'); el.setAttribute('aria-label',`第 ${i+1} 句，双击编辑`); el.setAttribute('aria-multiline','false');
+      if($('syncToggle').checked && i===activeIndex) el.classList.add('active');
+      list.append(el);
+    });
+    refreshAssetList();
+  }
+  function refreshAssetList() {
+    const values=[];
+    if(videoLabel) values.push(`视频：${videoLabel}`);
+    if(srtFileName) values.push(`SRT：${srtFileName}`);
+    if(jsonFileName) values.push(`JSON3：${jsonFileName}`);
+    $('assetList').textContent=values.length?`当前文件 · ${values.join('　 /  ')}`:'';
+  }
+  function expandImport(open) {
+    const panel=$('importPanel'), link=$('toggleImport');
+    if(open) {
+      $('captionSettingsPanel').classList.remove('open'); $('captionSettingsToggle').setAttribute('aria-expanded','false');
+    }
+    panel.classList.toggle('open',open); link.setAttribute('aria-expanded',String(open));
+  }
+  function expandCaptionSettings(open) {
+    const panel=$('captionSettingsPanel'), link=$('captionSettingsToggle');
+    if(open) {
+      $('importPanel').classList.remove('open'); $('toggleImport').setAttribute('aria-expanded','false');
+    }
+    panel.classList.toggle('open',open); link.setAttribute('aria-expanded',String(open));
+  }
+  function hasLoadedAssets() { return Boolean(videoLabel || srtFileName || jsonFileName); }
+  function updateImportLocation() {
+    const bar=$('importBar'), home=$('homeImportSpot'), slot=$('importMenuSlot');
+    const loaded=hasLoadedAssets(), target=loaded?slot:home;
+    if(bar.parentElement!==target) target.appendChild(bar);
+    $('toggleImport').textContent=loaded?'更换文件':'导入文件';
+    $('toggleImport').classList.toggle('home-import-trigger',!loaded);
+    $('toggleImport').classList.toggle('dock-trigger',loaded);
+    home.hidden=loaded;
+  }
+  function applyCaptionSettings() {
+    const size=Math.max(12,Math.min(36,Number($('captionSizeRange').value)||21));
+    document.documentElement.style.setProperty('--caption-size',`${size}px`);
+    $('captionSizeValue').textContent=`${size}px`;
+    $('videoCaption').hidden=!$('captionVisibleToggle').checked;
+    updateCaption();
+  }
+  function isVideoFile(file) { return file.type.startsWith('video/') || /\.(mp4|webm|mov|mkv|avi|m4v|ts|mts|flv|ogv|mpeg|mpg)$/i.test(file.name); }
+  function setPlayerSource(src,name,isRemote=false) {
+    if(currentObjectUrl) { URL.revokeObjectURL(currentObjectUrl); currentObjectUrl=null; }
+    if(src.startsWith('blob:')) currentObjectUrl=src;
+    videoLabel=name||'video'; video.src=src; video.load();
+    playerWindow.classList.add('visible'); updateUrlName(videoLabel,isRemote?src:'');
+    syncWorkspaceLayout(); refreshAssetList(); updateImportLocation();
+  }
+  function syncWorkspaceLayout() {
+    const showWorkspace=playerWindow.classList.contains('visible') && video.hasAttribute('src');
+    dualWorkspace.classList.toggle('open',showWorkspace);
+    dualWorkspace.classList.toggle('single-mode',showWorkspace && !dualMode);
+    dualWorkspace.classList.toggle('dual-mode',showWorkspace && dualMode);
+    document.body.classList.toggle('workspace-mode',showWorkspace);
+    document.body.classList.toggle('dual-mode',showWorkspace && dualMode);
+    $('dualToggle').setAttribute('aria-pressed',String(dualMode));
+    $('dualToggle').textContent=dualMode?'单栏':'双栏';
+    const splitter=$('splitter');
+    splitter.setAttribute('aria-orientation',dualMode?'vertical':'horizontal');
+    splitter.setAttribute('aria-label',dualMode?'拖动调整视频与文字区域宽度':'拖动调整视频与文字区域高度');
+    if(showWorkspace) {
+      if(playerWindow.parentElement!==dualVideoPane) dualVideoPane.appendChild(playerWindow);
+      if(transcriptWrap.parentElement!==dualTranscriptPane) dualTranscriptPane.appendChild(transcriptWrap);
+      playerWindow.classList.add('workspace-player');
+      if(!dualWorkspace.style.getPropertyValue('--stack-video-fraction')) dualWorkspace.style.setProperty('--stack-video-fraction','42%');
+      if(!dualWorkspace.style.getPropertyValue('--video-fraction')) dualWorkspace.style.setProperty('--video-fraction','50%');
+    } else {
+      playerWindow.classList.remove('workspace-player');
+      if(originalPlayerParent) originalPlayerParent.insertBefore(playerWindow, originalPlayerNext && originalPlayerNext.parentNode===originalPlayerParent ? originalPlayerNext : null);
+      if(originalTranscriptParent) originalTranscriptParent.insertBefore(transcriptWrap, originalTranscriptNext && originalTranscriptNext.parentNode===originalTranscriptParent ? originalTranscriptNext : null);
+    }
+  }
+  async function loadSelectedFiles(files) {
+    const arr=[...files]; if(!arr.length) return;
+    let loadedAny=false, errors=[], srtChanged=false, jsonChanged=false;
+    const videoFile=arr.find(isVideoFile);
+    const textFiles=arr.filter(f=>!isVideoFile(f));
+    const contents=await Promise.all(textFiles.map(async file=>({file,text:await file.text()})));
+    let chosenSrt=null, chosenJson=null;
+    for(const item of contents) {
+      const name=item.file.name.toLowerCase();
+      if(name.endsWith('.srt') || (/-->\s*\d{1,2}:\d{2}/.test(item.text) && !chosenSrt)) chosenSrt=item;
+      else if(name.endsWith('.json3') || name.endsWith('.json')) {
+        try { const data=JSON.parse(item.text.replace(/^\uFEFF/,'')); if(Array.isArray(data?.events) || Array.isArray(data?.transcript?.events)) chosenJson=item; } catch {}
+      } else {
+        try { const data=JSON.parse(item.text.replace(/^\uFEFF/,'')); if((Array.isArray(data?.events)||Array.isArray(data?.transcript?.events))&&!chosenJson) chosenJson=item; } catch {}
+      }
+    }
+    if(videoFile) { setPlayerSource(URL.createObjectURL(videoFile),videoFile.name,false); loadedAny=true; }
+    if(chosenSrt) {
+      const parsed=parseSrt(chosenSrt.text);
+      if(parsed.length) { srtCues=parsed; srtFileName=chosenSrt.file.name; loadedAny=true; srtChanged=true; }
+      else errors.push(`SRT 无有效字幕：${chosenSrt.file.name}`);
+    }
+    if(chosenJson) {
+      try {
+        const parsed=parseJson3(chosenJson.text);
+        if(parsed.cues.length) { jsonData=parsed; jsonWords=parsed.timedWords; jsonFileName=chosenJson.file.name; loadedAny=true; jsonChanged=true; }
+        else errors.push(`JSON3 没有字幕文字：${chosenJson.file.name}`);
+      } catch(err) { errors.push(err.message||`JSON3 解析失败：${chosenJson.file.name}`); }
+    }
+    if(!videoFile && !chosenSrt && !chosenJson) errors.push('没有识别到视频、SRT 或 JSON3 文件。');
+    if(srtChanged) buildCurrentSentences();
+    else if(jsonChanged) {
+      if(!srtCues.length) buildCurrentSentences();
+      else { sentences=alignSentenceWords(sentences,jsonWords); renderTranscript(); updatePlaybackPosition(true); updateCaption(); }
+    }
+    refreshAssetList(); updateImportLocation();
+    if(loadedAny) { expandImport(false); showToast(errors.length?errors.join('；'):'文件已导入。'+(sentences.length?` 当前文字稿 ${sentences.length} 句。`:''),errors.length>0); }
+    else showToast(errors.join('；')||'没有导入有效文件。',true);
+  }
+  function startEditing(el) {
+    const requested=Number(el.dataset.index);
+    if(editingIndex!==null && editingIndex!==requested) { finishEditing(true); el=document.querySelector(`.sentence[data-index="${requested}"]`); if(!el)return; }
+    editingIndex=requested; editBackup=el.textContent; el.contentEditable='true'; el.classList.add('editing'); el.focus();
+    const range=document.createRange(); range.selectNodeContents(el); range.collapse(false); const sel=getSelection(); sel.removeAllRanges(); sel.addRange(range);
+  }
+  function finishEditing(save) {
+    if(editingIndex===null)return;
+    const el=document.querySelector(`.sentence[data-index="${editingIndex}"]`), idx=editingIndex; editingIndex=null; if(!el)return;
+    const newText=save?el.textContent.replace(/[\r\n]+/g,' ').replace(/\s+/g,' ').trim():editBackup;
+    el.contentEditable='false'; el.classList.remove('editing'); el.textContent=newText;
+    if(save && newText!==sentences[idx]?.text) {
+      if(newText) sentences[idx].text=newText; else sentences.splice(idx,1);
+      sentences=alignSentenceWords(sentences,jsonWords);
+      renderTranscript(); updatePlaybackPosition(true); updateCaption(); showToast('已保存修改。');
+    }
+  }
+  function getTextOffset(root,node,offset) {
+    const range=document.createRange(); range.selectNodeContents(root); range.setEnd(node,offset); return range.toString().length;
+  }
+  function seekSelectedWord() {
+    const selection=getSelection(); if(!selection||selection.isCollapsed||!selection.rangeCount)return;
+    const range=selection.getRangeAt(0);
+    const startEl=range.startContainer.nodeType===Node.ELEMENT_NODE?range.startContainer:range.startContainer.parentElement;
+    const endEl=range.endContainer.nodeType===Node.ELEMENT_NODE?range.endContainer:range.endContainer.parentElement;
+    const sentenceEl=startEl?.closest?.('.sentence'); if(!sentenceEl||endEl?.closest?.('.sentence')!==sentenceEl||sentenceEl.isContentEditable)return;
+    const item=sentences[Number(sentenceEl.dataset.index)]; if(!item)return;
+    let a=0,b=0; try {a=getTextOffset(sentenceEl,range.startContainer,range.startOffset);b=getTextOffset(sentenceEl,range.endContainer,range.endOffset);}catch{return;}
+    const words=item.words||[]; let word=words.find(w=>a>=w.start&&a<w.end); if(!word)word=words.find(w=>w.start<b&&w.end>a); if(!word)word=words.find(w=>w.start>=a)||words[words.length-1];
+    const time=word?.timing?.start??item.start??item.sourceStart;
+    if(!Number.isFinite(time)){showToast('这句话没有可用的时间信息。',true);return;}
+    if(!video.src){showToast('请先导入视频。',true);return;}
+    try { video.currentTime=Math.max(0,time); if(video.paused)video.play().catch(()=>{}); }
+    catch {showToast('当前视频无法跳转。',true);}
+  }
+  function getActiveIndex(time) {
+    let found=-1, best=-Infinity;
+    for(let i=0;i<sentences.length;i++) {
+      const s=sentences[i]; if(Number.isFinite(s.start)&&Number.isFinite(s.end)&&time>=s.start-0.015&&time<=s.end+0.025&&s.start>=best){found=i;best=s.start;}
+    }
+    return found;
+  }
+  function updateCaption() {
+    const idx=getActiveIndex(video.currentTime||0);
+    $('videoCaption').textContent=idx>=0?sentences[idx].text:'';
+  }
+  function scrollActiveSentence(el, behavior='smooth') {
+    if(!el) return;
+    if(dualWorkspace.classList.contains('open')) {
+      const pane=dualTranscriptPane;
+      const paneRect=pane.getBoundingClientRect(), rect=el.getBoundingClientRect();
+      const top=pane.scrollTop+(rect.top-paneRect.top)-(pane.clientHeight-rect.height)/2;
+      pane.scrollTo({top:Math.max(0,top),behavior});
+      return;
+    }
+    el.scrollIntoView({behavior,block:'center'});
+  }
+  function updatePlaybackPosition(force=false) {
+    const next=getActiveIndex(video.currentTime||0);
+    if(next!==activeIndex || force) {
+      activeIndex=next;
+      document.querySelectorAll('.sentence.active').forEach(el=>el.classList.remove('active'));
+      if($('syncToggle').checked && activeIndex>=0) {
+        const el=document.querySelector(`.sentence[data-index="${activeIndex}"]`);
+        if(el) { el.classList.add('active'); scrollActiveSentence(el,force?'auto':'smooth'); }
+      }
+    }
+    updateCaption();
+  }
+  function setDualMode(enabled) {
+    if (dualMode === enabled) return;
+    dualMode = enabled;
+    syncWorkspaceLayout();
+    updatePlaybackPosition(true);
+    updateCaption();
+  }
+  function jumpToSentence(direction) {
+    if (!sentences.length) { showToast('请先导入字幕。', true); return; }
+    if (!video.src) { showToast('请先导入视频。', true); return; }
+    const time = Number(video.currentTime) || 0;
+    let index = getActiveIndex(time);
+    if (index >= 0) index += direction;
+    else if (direction > 0) {
+      index = sentences.findIndex(s => Number(s.start) > time + 0.04);
+      if (index < 0) index = sentences.length - 1;
+    } else {
+      index = -1;
+      for (let i = 0; i < sentences.length; i++) if (Number(sentences[i].start) < time - 0.04) index = i; else break;
+    }
+    index = Math.max(0, Math.min(sentences.length - 1, index));
+    const target = Number.isFinite(sentences[index].start) ? sentences[index].start : sentences[index].sourceStart;
+    if (!Number.isFinite(target)) { showToast('这句话没有可用的时间信息。', true); return; }
+    try { video.currentTime = Math.max(0, target); updatePlaybackPosition(true); }
+    catch { showToast('当前视频无法跳转。', true); }
+  }
+  function changePlaybackRate(delta) {
+    const next = Math.max(0.1, Math.min(4, Math.round((video.playbackRate + delta) * 10) / 10));
+    video.playbackRate = next;
+    updateRateButtons();
+    showToast(`播放速度 ${next.toFixed(1)}×`);
+  }
+  function updateRateButtons() {
+    const rate = Number(video.playbackRate) || 1;
+    $('slowerBtn').disabled = rate <= 0.1;
+    $('fasterBtn').disabled = rate >= 4;
+    $('normalSpeedBtn').textContent = '恢复原速';
+    $('speedReadout').textContent = `${Number.isInteger(rate) ? rate : rate.toFixed(1)}x`;
+    $('video').setAttribute('data-playback-rate', rate.toFixed(1));
+  }
+  function updateSplitFromPointer(clientX,clientY) {
+    const rect=dualWorkspace.getBoundingClientRect();
+    const style=getComputedStyle(dualWorkspace);
+    if(dualMode) {
+      const padLeft=parseFloat(style.paddingLeft)||0, padRight=parseFloat(style.paddingRight)||0;
+      const innerWidth=Math.max(1,rect.width-padLeft-padRight);
+      const pct=Math.max(25,Math.min(75,((clientX-rect.left-padLeft)/innerWidth)*100));
+      dualWorkspace.style.setProperty('--video-fraction',`${pct}%`);
+      $('splitter').setAttribute('aria-valuenow',String(Math.round(pct)));
+    } else {
+      const padTop=parseFloat(style.paddingTop)||0, padBottom=parseFloat(style.paddingBottom)||0;
+      const innerHeight=Math.max(1,rect.height-padTop-padBottom);
+      const pct=Math.max(24,Math.min(78,((clientY-rect.top-padTop)/innerHeight)*100));
+      dualWorkspace.style.setProperty('--stack-video-fraction',`${pct}%`);
+      $('splitter').setAttribute('aria-valuenow',String(Math.round(pct)));
+    }
+  }
+
+  function formatSrtTime(value) {
+    const ms=Math.max(0,Math.round((Number(value)||0)*1000));
+    const hh=String(Math.floor(ms/3600000)).padStart(2,'0'), mm=String(Math.floor(ms%3600000/60000)).padStart(2,'0'), ss=String(Math.floor(ms%60000/1000)).padStart(2,'0'), milli=String(ms%1000).padStart(3,'0');
+    return `${hh}:${mm}:${ss},${milli}`;
+  }
+  function buildSrt() {
+    let previousEnd=0;
+    return sentences.map((s,i)=>{
+      let start=Number.isFinite(s.start)?Math.max(0,s.start):previousEnd;
+      let end=Number.isFinite(s.end)?s.end:start+Math.max(1.1,Math.min(3.5,s.text.length*.055));
+      if(i>0&&start<previousEnd&&s.start>=previousEnd-.03)start=previousEnd;
+      if(!(end>start))end=start+1; if(end-start<.08)end=start+.08; previousEnd=end;
+      return `${i+1}\n${formatSrtTime(start)} --> ${formatSrtTime(end)}\n${s.text}`;
+    }).join('\n\n')+(sentences.length?'\n':'');
+  }
+  function downloadText(filename,contents,type) {
+    const blob=new Blob(['\uFEFF',contents],{type:`${type};charset=utf-8`}),url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
+  function baseFileName() {return safeName(videoLabel||'transcript').replace(/\.[^.]+$/,'')||'transcript';}
+  function clearAll() {
+    video.pause(); video.removeAttribute('src'); video.load(); if(currentObjectUrl){URL.revokeObjectURL(currentObjectUrl);currentObjectUrl=null;}
+    videoLabel='';srtFileName='';jsonFileName='';srtCues=[];jsonData={cues:[],timedWords:[]};jsonWords=[];sentences=[];editingIndex=null;activeIndex=-1;
+    $('sourceInput').value='';$('videoUrlInput').value='';playerWindow.classList.remove('visible');$('videoCaption').textContent=''; syncWorkspaceLayout();
+    try{const u=new URL(location.href);u.searchParams.delete('video');u.searchParams.delete('src');history.replaceState({},'',u.pathname+u.search+u.hash);}catch{}
+    renderTranscript();refreshAssetList();updateImportLocation();expandImport(false);showToast('已清空。');
+  }
+  $('toggleImport').addEventListener('click',()=>expandImport(!$('importPanel').classList.contains('open')));
+  $('captionSettingsToggle').addEventListener('click',()=>expandCaptionSettings(!$('captionSettingsPanel').classList.contains('open')));
+  $('settingsMenuToggle').addEventListener('click',()=>{
+    const open=!$('settingsMenu').classList.contains('open');
+    $('settingsMenu').classList.toggle('open',open);
+    $('settingsMenuToggle').setAttribute('aria-expanded',String(open));
+  });
+  document.addEventListener('pointerdown',e=>{
+    if(!$('settingsMenuAnchor').contains(e.target)) {
+      $('settingsMenu').classList.remove('open'); $('settingsMenuToggle').setAttribute('aria-expanded','false');
+      const focused=document.activeElement;
+      if(focused && $('settingsMenuAnchor').contains(focused) && typeof focused.blur==='function') focused.blur();
+    }
+  });
+  $('captionVisibleToggle').addEventListener('change',applyCaptionSettings);
+  $('captionSizeRange').addEventListener('input',applyCaptionSettings);
+  $('sourceInput').addEventListener('change',async e=>{try{await loadSelectedFiles(e.target.files||[]);}catch(err){showToast(err.message||'文件读取失败。',true);}finally{e.target.value='';}});
+  $('loadUrlBtn').addEventListener('click',()=>{
+    const value=$('videoUrlInput').value.trim();if(!value){showToast('请输入视频直链。',true);return;}
+    try{const u=new URL(value);if(!['http:','https:','blob:'].includes(u.protocol))throw new Error();setPlayerSource(u.href,basenameFromUrl(u.href),true);updateImportLocation();expandImport(false);showToast('视频链接已加载。');}
+    catch{showToast('请输入完整的 http 或 https 视频直链。',true);}
+  });
+  $('videoUrlInput').addEventListener('keydown',e=>{if(e.key==='Enter')$('loadUrlBtn').click();});
+  $('clearBtn').addEventListener('click',clearAll);
+  $('exportTxtBtn').addEventListener('click',()=>downloadText(`${baseFileName()}.txt`,sentences.map(s=>s.text).join('\n\n'),'text/plain'));
+  $('exportSrtBtn').addEventListener('click',()=>downloadText(`${baseFileName()}.srt`,buildSrt(),'application/x-subrip'));
+  $('transcriptList').addEventListener('dblclick',e=>{const el=e.target.closest('.sentence');if(el)startEditing(el);});
+  $('transcriptList').addEventListener('keydown',e=>{const el=e.target.closest('.sentence');if(!el||!el.isContentEditable)return;if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();finishEditing(true);}else if(e.key==='Escape'){e.preventDefault();finishEditing(false);}});
+  $('transcriptList').addEventListener('focusout',e=>{const el=e.target.closest('.sentence');if(el&&el.isContentEditable)finishEditing(true);});
+  $('syncToggle').addEventListener('change',()=>{
+    document.querySelectorAll('.sentence.active').forEach(el=>el.classList.remove('active'));
+    if($('syncToggle').checked&&activeIndex>=0){const el=document.querySelector(`.sentence[data-index="${activeIndex}"]`);if(el){el.classList.add('active');scrollActiveSentence(el,'smooth');}}
+  });
+  $('dualToggle').addEventListener('click', () => setDualMode(!dualMode));
+  $('prevSentenceBtn').addEventListener('click', () => jumpToSentence(-1));
+  $('nextSentenceBtn').addEventListener('click', () => jumpToSentence(1));
+  $('slowerBtn').addEventListener('click', () => changePlaybackRate(-0.1));
+  $('fasterBtn').addEventListener('click', () => changePlaybackRate(0.1));
+  $('normalSpeedBtn').addEventListener('click', () => { video.playbackRate = 1; updateRateButtons(); showToast('已恢复原速。'); });
+  $('splitter').addEventListener('pointerdown', e => {
+    if (!dualWorkspace.classList.contains('open') || e.button !== 0) return;
+    splitDrag = true;
+    $('splitter').setPointerCapture(e.pointerId);
+    document.body.style.cursor = dualMode ? 'col-resize' : 'row-resize';
+    e.preventDefault();
+  });
+  $('splitter').addEventListener('pointermove', e => { if (splitDrag) updateSplitFromPointer(e.clientX,e.clientY); });
+  const stopSplitDrag = () => { splitDrag = false; document.body.style.cursor = ''; };
+  $('splitter').addEventListener('pointerup', stopSplitDrag);
+  $('splitter').addEventListener('pointercancel', stopSplitDrag);
+  $('splitter').addEventListener('keydown', e => {
+    const arrows=dualMode?['ArrowLeft','ArrowRight']:['ArrowUp','ArrowDown'];
+    if (!dualWorkspace.classList.contains('open') || !arrows.includes(e.key)) return;
+    e.preventDefault();
+    if(dualMode) {
+      const raw=getComputedStyle(dualWorkspace).getPropertyValue('--video-fraction').trim()||'50%';
+      const current=parseFloat(raw)||50, next=Math.max(25,Math.min(75,current+(e.key==='ArrowRight'?2:-2)));
+      dualWorkspace.style.setProperty('--video-fraction',`${next}%`);
+      $('splitter').setAttribute('aria-valuenow',String(Math.round(next)));
+    } else {
+      const raw=getComputedStyle(dualWorkspace).getPropertyValue('--stack-video-fraction').trim()||'42%';
+      const current=parseFloat(raw)||42, next=Math.max(24,Math.min(78,current+(e.key==='ArrowDown'?2:-2)));
+      dualWorkspace.style.setProperty('--stack-video-fraction',`${next}%`);
+      $('splitter').setAttribute('aria-valuenow',String(Math.round(next)));
+    }
+  });
+
+  video.addEventListener('timeupdate',()=>{updatePlaybackPosition();});
+  video.addEventListener('seeked',()=>updatePlaybackPosition(true));
+  video.addEventListener('loadedmetadata',()=>{updateCaption();updateRateButtons();});
+  video.addEventListener('error',()=>{if(video.src)showToast('当前浏览器无法播放这个视频编码。',true);});
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape') {
+      $('settingsMenu').classList.remove('open'); $('settingsMenuToggle').setAttribute('aria-expanded','false');
+      expandImport(false); expandCaptionSettings(false);
+      const focused=document.activeElement;
+      if(focused && $('settingsMenuAnchor').contains(focused) && typeof focused.blur==='function') focused.blur();
+      return;
+    }
+    if(e.key.toLowerCase()!=='w'||e.ctrlKey||e.metaKey||e.altKey||e.repeat)return;
+    const target=e.target;if(target&&(target.isContentEditable||/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName)))return;
+    const sel=getSelection();if(!sel||sel.isCollapsed)return;const node=sel.anchorNode,el=node&&(node.nodeType===Node.ELEMENT_NODE?node:node.parentElement);
+    if(!el?.closest?.('.sentence'))return;e.preventDefault();seekSelectedWord();
+  });
+  // The video remains in the top workspace pane; only the separator changes its size.
+  window.addEventListener('resize',()=>{
+    if(dualWorkspace.classList.contains('open')) {
+      const raw=getComputedStyle(dualWorkspace).getPropertyValue(dualMode?'--video-fraction':'--stack-video-fraction').trim();
+      if(!raw) dualWorkspace.style.setProperty(dualMode?'--video-fraction':'--stack-video-fraction',dualMode?'50%':'42%');
+    }
+  });
+  // Restore only remote URLs. Local files must be selected again after a refresh.
+  try{const p=new URLSearchParams(location.search),name=p.get('video'),src=p.get('src');if(src){$('videoUrlInput').value=src;setPlayerSource(src,name||basenameFromUrl(src),true);}}catch{}
+  updateImportLocation();
+  renderTranscript();
+  updateRateButtons();
+  applyCaptionSettings();
+})();
+</script>
+</body>
+</html>
