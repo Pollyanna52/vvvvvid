@@ -183,7 +183,15 @@
   const originalTranscriptParent = transcriptWrap.parentNode, originalTranscriptNext = transcriptWrap.nextSibling;
   const originalPlayerParent = playerWindow.parentNode, originalPlayerNext = playerWindow.nextSibling;
   let dualMode = false, splitDrag = null;
-  let currentObjectUrl = null, videoLabel = '', srtFileName = '', jsonFileName = '';
+  let currentObjectUrl = null, videoLabel = '', srtFileName = '', jsonFileName = '', remoteVideoUrl = '';
+  const appBasePath = (() => {
+    const path = location.pathname;
+    const last = path.split('/').pop() || '';
+    const fileLike = /\.(?:html?|php|aspx?|mp4|webm|mov|mkv|avi|m4v|ts|mts|flv|ogv|mpeg|mpg|srt|json3?)$/i.test(last);
+    if (path.endsWith('/')) return path;
+    if (fileLike) return path.slice(0, path.lastIndexOf('/') + 1);
+    return path + '/';
+  })();
   let srtCues = [], jsonData = { cues:[], timedWords:[] }, jsonWords = [], sentences = [];
   let editingIndex = null, editBackup = '', toastTimer = null, activeIndex = -1;
   const wordRegex = /[\p{L}\p{N}\p{M}]+(?:[’'][\p{L}\p{N}\p{M}]+)*/gu;
@@ -202,7 +210,19 @@
     catch { return 'video'; }
   }
   function updateUrlName(name, sourceUrl='') {
-    try { const url=new URL(location.href); url.searchParams.set('video',safeName(name).replace(/ /g,'_')); if(sourceUrl) url.searchParams.set('src',sourceUrl); else url.searchParams.delete('src'); history.replaceState({},'',url.pathname+url.search+url.hash); } catch {}
+    try {
+      const url = new URL(location.href);
+      const fileName = safeName(name).replace(/\s+/g, '_');
+      url.pathname = name ? appBasePath + encodeURIComponent(fileName) : appBasePath;
+      if (name) url.searchParams.set('video', fileName);
+      else url.searchParams.delete('video');
+      if (sourceUrl) url.searchParams.set('src', sourceUrl);
+      else url.searchParams.delete('src');
+      history.replaceState({}, '', url.pathname + url.search + url.hash);
+    } catch {}
+  }
+  function updateUrlForCurrentAssets() {
+    updateUrlName(videoLabel || srtFileName, remoteVideoUrl);
   }
   function parseTimecode(s) {
     const match = String(s).trim().match(/(?:(\d{1,2}):)?(\d{1,2}):(\d{2})[,.](\d{1,3})/);
@@ -461,8 +481,8 @@
   function setPlayerSource(src,name,isRemote=false) {
     if(currentObjectUrl) { URL.revokeObjectURL(currentObjectUrl); currentObjectUrl=null; }
     if(src.startsWith('blob:')) currentObjectUrl=src;
-    videoLabel=name||'video'; updateDocumentTitle(); video.src=src; video.load();
-    playerWindow.classList.add('visible'); updateUrlName(videoLabel,isRemote?src:'');
+    videoLabel=name||'video'; remoteVideoUrl=isRemote?src:''; updateDocumentTitle(); video.src=src; video.load();
+    playerWindow.classList.add('visible'); updateUrlForCurrentAssets();
     syncWorkspaceLayout(); refreshAssetList(); updateImportLocation();
   }
   function syncWorkspaceLayout() {
@@ -508,7 +528,7 @@
     if(videoFile) { setPlayerSource(URL.createObjectURL(videoFile),videoFile.name,false); loadedAny=true; }
     if(chosenSrt) {
       const parsed=parseSrt(chosenSrt.text);
-      if(parsed.length) { srtCues=parsed; srtFileName=chosenSrt.file.name; updateDocumentTitle(); loadedAny=true; srtChanged=true; }
+      if(parsed.length) { srtCues=parsed; srtFileName=chosenSrt.file.name; updateDocumentTitle(); updateUrlForCurrentAssets(); loadedAny=true; srtChanged=true; }
       else errors.push(`SRT 无有效字幕：${chosenSrt.file.name}`);
     }
     if(chosenJson) {
@@ -677,10 +697,10 @@
   function baseFileName() {return safeName(videoLabel||'transcript').replace(/\.[^.]+$/,'')||'transcript';}
   function clearAll() {
     video.pause(); video.removeAttribute('src'); video.load(); if(currentObjectUrl){URL.revokeObjectURL(currentObjectUrl);currentObjectUrl=null;}
-    videoLabel='';srtFileName='';jsonFileName='';srtCues=[];jsonData={cues:[],timedWords:[]};jsonWords=[];sentences=[];editingIndex=null;activeIndex=-1;
+    videoLabel='';srtFileName='';jsonFileName='';remoteVideoUrl='';srtCues=[];jsonData={cues:[],timedWords:[]};jsonWords=[];sentences=[];editingIndex=null;activeIndex=-1;
     updateDocumentTitle();
     $('sourceInput').value='';$('videoUrlInput').value='';playerWindow.classList.remove('visible');$('videoCaption').textContent=''; syncWorkspaceLayout();
-    try{const u=new URL(location.href);u.searchParams.delete('video');u.searchParams.delete('src');history.replaceState({},'',u.pathname+u.search+u.hash);}catch{}
+    try{const u=new URL(location.href);u.pathname=appBasePath;u.searchParams.delete('video');u.searchParams.delete('src');history.replaceState({},'',u.pathname+u.search+u.hash);}catch{}
     renderTranscript();refreshAssetList();updateImportLocation();expandImport(false);showToast('已清空。');
   }
   $('toggleImport').addEventListener('click',()=>expandImport(!$('importPanel').classList.contains('open')));
